@@ -428,7 +428,7 @@ class CreateTrainMOdel:
         metrics: Dict[str, float] = {}
         for i in k:
             metrics[f"average_precision_at_{i}"] = self._calculate_precision_at_k(
-                distances, labels_test, labels_ref, top_k=i)
+                distances, labels_test, labels_ref, k=i)
 
         # Calculate mean average precision (MAP)
         mean_average_precision: float = sum(
