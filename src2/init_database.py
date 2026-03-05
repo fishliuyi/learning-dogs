@@ -39,9 +39,9 @@ def main():
     start_stats = get_system_stats()
 
     index = "pet"
-    db_path = "data\\features"
-    md_path = "data\\TsinghuaDogs\\model\\proxynca-resnet50.pth"
-    img_path = "data\\TsinghuaDogs\\high-resolution"
+    db_path = "data/features"
+    md_path = "data/TsinghuaDogs/model/proxynca-resnet50.pth"
+    img_path = "data/TsinghuaDogs/high-resolution"
     n_process = None
     batch_size = 500
     total = create_feature_database(

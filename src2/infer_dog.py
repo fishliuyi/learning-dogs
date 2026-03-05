@@ -20,8 +20,8 @@ def query(url: str):
     image_loader = ImageLoader()
     image: Image = image_loader.load_from_url(url)
 
-    md_path = "data\\TsinghuaDogs\\model\\proxynca-resnet50.pth"
-    db_path = "data\\features"
+    md_path = "data/TsinghuaDogs/model/proxynca-resnet50.pth"
+    db_path = "data/features"
     index_name = "pet"
     query_size = 50
     sort = 3
