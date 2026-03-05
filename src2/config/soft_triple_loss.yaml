@@ -6,7 +6,7 @@
     # Size of output embedding vector
     "embedding_size": 128,
     # Batch size
-    "batch_size": 512,  # 大批次，充分利用 64GB 内存
+    "batch_size": 128,  # 大批次，充分利用 64GB 内存
     # Number of workers for data loading
     "n_workers": 8,  # Windows 上使用主进程加载数据
     # Gradient accumulation steps (模拟更大 batch)

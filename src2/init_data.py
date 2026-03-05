@@ -30,5 +30,5 @@ def split_train_val(images_dir: str, output_dir: str, lst_path: str):
 
     
 if __name__ == "__main__":
-    split_train_val("data\\TsinghuaDogs\\high-resolution\\", "data\\TsinghuaDogs\\train\\", "data\\TsinghuaDogs\\TrainAndValList\\train.lst")
-    split_train_val("data\\TsinghuaDogs\\high-resolution\\", "data\\TsinghuaDogs\\val\\", "data\\TsinghuaDogs\\TrainAndValList\\validation.lst")
+    split_train_val("data/TsinghuaDogs/high-resolution/", "data/TsinghuaDogs/train/", "data/TsinghuaDogs/TrainAndValList/train.lst")
+    split_train_val("data/TsinghuaDogs/high-resolution/", "data/TsinghuaDogs/val/", "data/TsinghuaDogs/TrainAndValList/validation.lst")

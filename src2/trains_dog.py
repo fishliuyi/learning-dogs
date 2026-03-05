@@ -24,11 +24,11 @@ def main():
     2. 运行 python train_model.py
     """
     # ==================== 配置区域 ====================
-    CONFIG_PATH = "src2\\config\\soft_triple_loss.yaml"  # 配置文件路径
-    MODEL_PATH = "data\\TsinghuaDogs\\model\\train-resnet50.pth"  # 预训练模型路径名
-    DATA_PATH = "data\\TsinghuaDogs\\train\\"  # 训练数据路径
-    TEST_PATH = "data\\TsinghuaDogs\\val\\"  # 验证数据路径
-    CHECKPOINT_PATH = "data\\TsinghuaDogs\\checkpoints\\"  # 检查点保存路径
+    CONFIG_PATH = "src2/config/soft_triple_loss.yaml"  # 配置文件路径
+    MODEL_PATH = "data/TsinghuaDogs/model/train-resnet50.pth"  # 预训练模型路径名
+    DATA_PATH = "data/TsinghuaDogs/train/"  # 训练数据路径
+    TEST_PATH = "data/TsinghuaDogs/val/"  # 验证数据路径
+    CHECKPOINT_PATH = "data/TsinghuaDogs/checkpoints/"  # 检查点保存路径
 
     TRAIN_EPOCHS = 100  # 训练轮次
     VALIDATE_FREQUENCY = 1000  # 验证频率（迭代次数）
