@@ -1,27 +1,54 @@
-{
-    # Learning rate
-    "lr": 0.0001,
-    # Size of images to be resized before training
-    "image_size": 448,  # 保持高分辨率以获得更好精度
-    # Size of output embedding vector
-    "embedding_size": 128,
-    # Batch size
-    "batch_size": 32,  # 大批次，充分利用 64GB 内存
-    # Number of workers for data loading
-    "n_workers": 2,  # Windows 上使用主进程加载数据
-    # Gradient accumulation steps (模拟更大 batch)
-    "accumulation_steps": 1,  # 累积 2 步，等效 batch_size=512
+# SoftTriple Loss 配置参数
+# Learning rate - 建议使用较小的学习率配合梯度累积
+lr: 0.0001
 
-    # Numbers of centers for each class
-    "n_centers_per_class": 5,
-    # lambda is for calculating distance probability. See section 3.2 in the paper for more detail.
-    "lambda": 20,
-    # gamma is for calculating cross entropy loss. See section 3.2 in the paper for more detail.
-    "gamma": 0.1,
-    # tau is for regularization. See section 3.2 in the paper for more detail.
-    "tau": 0.,
-    # Margin factor
-    "margin": 0.01,
-    # Whether to use pretrained weight on ImageNet or not
-    "pretrained": True,
-}
+# Size of images to be resized before training
+image_size: 448  # 保持高分辨率以获得更好精度
+
+# Size of output embedding vector
+embedding_size: 128
+
+# Batch size - 单批次大小（每张 GPU/ MPS）
+batch_size: 32  # 基础批次大小
+
+# Number of workers for data loading
+# Mac M1/M2 推荐：2-4，Windows 推荐：0-1
+n_workers: 4
+
+# Gradient accumulation steps
+# 有效批次大小 = batch_size × accumulation_steps
+# 推荐值：8-16（等效 batch_size=256-512）
+accumulation_steps: 16
+
+# Numbers of centers for each class
+n_centers_per_class: 5
+
+# lambda is for calculating distance probability (Section 3.2 in paper)
+lambda: 20.0
+
+# gamma - 让 softmax 更尖锐，加速收敛
+# 有效范围：10.0-100.0
+gamma: 10.0
+
+# tau - 类内中心正则化权重
+# 建议值：0.1
+tau: 0.1
+
+# Margin factor - 增强类别判别性
+# 有效范围：0.1-1.0
+margin: 0.3
+
+# Whether to use pretrained weight on ImageNet
+pretrained: true
+
+# Training optimization parameters
+# 学习率调度器 - 当验证指标不提升时降低学习率
+lr_scheduler_patience: 10  # 等待多少个 epoch 后降低学习率
+lr_scheduler_factor: 0.1   # 学习率衰减因子
+
+# 早停机制 - 防止过拟合
+early_stopping_patience: 20  # 验证指标多少轮不提升后停止训练
+min_delta: 0.001             # 最小改进阈值
+
+# 日志频率
+log_frequency: 50  # 每多少次迭代打印一次日志

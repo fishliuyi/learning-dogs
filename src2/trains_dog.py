@@ -30,9 +30,9 @@ def main():
     TEST_PATH = "data/TsinghuaDogs/val/"  # 验证数据路径
     CHECKPOINT_PATH = "data/TsinghuaDogs/checkpoints/"  # 检查点保存路径
 
-    TRAIN_EPOCHS = 100  # 训练轮次
-    VALIDATE_FREQUENCY = 1000  # 验证频率（迭代次数）
-    RANDOM_SEED = 12345  # 随机种子
+    TRAIN_EPOCHS = 150  # 训练轮次（配合早停机制，实际可能提前结束）
+    VALIDATE_FREQUENCY = 100  # 验证频率（每个 epoch 验证一次）
+    RANDOM_SEED = 12345  # 随机种子（固定以确保可复现性）
     # ================================================
 
     try:

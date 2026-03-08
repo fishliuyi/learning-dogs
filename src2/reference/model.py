@@ -26,9 +26,9 @@ def get_optimal_device() -> torch.device:
 def get_config(conf_path: Path) -> Dict[str, Any]:
     """获取配置参数"""
     if not conf_path.exists():
-        raise FileNotFoundError(f"配置文件不存在: {self.conf_path}")
+        raise FileNotFoundError(f"配置文件不存在：{conf_path}")
     if not conf_path.is_file():
-        raise ValueError(f"配置路径不是文件: {self.conf_path}")
+        raise ValueError(f"配置路径不是文件：{conf_path}")
     with open(conf_path, "r", encoding="utf-8") as f:
         config: Dict[str, Any] = yaml.safe_load(f)
     return config
@@ -129,10 +129,10 @@ class LossModel(nn.Module):
         self.embedding_size: int = self.config.get("embedding_size", 128)
         self.n_centers_per_class: int = self.config.get(
             "n_centers_per_class", 32)
-        self.lambda_: float = self.config.get("lambda_", 1.0)
-        self.gamma: float = self.config.get("gamma", 1.0)
-        self.tau: float = self.config.get("tau", 1.0)
-        self.margin: float = self.config.get("margin", 1.0)
+        self.lambda_: float = self.config.get("lambda", 20.0)
+        self.gamma: float = self.config.get("gamma", 10.0)
+        self.tau: float = self.config.get("tau", 0.1)
+        self.margin: float = self.config.get("margin", 0.3)
 
         # 验证参数合理性
         self._validate_parameters()

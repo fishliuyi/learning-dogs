@@ -29,7 +29,7 @@ class CreateTrainMOdel:
                  test_path: str,
                  chk_path: str = "checkpoints",
                  train_epochs: int = 100,
-                 validate_frequency: int = 1000,
+                 validate_frequency: int = 100,
                  random_seed: int = 12345):
         """
         初始化训练模型
@@ -41,7 +41,7 @@ class CreateTrainMOdel:
             test_path: 测试数据路径
             chk_path: 检查点保存目录，默认 "checkpoints"
             train_epochs: 训练轮次，默认 100
-            validate_frequency: 验证频率，默认 1000
+            validate_frequency: 验证频率，默认 100（每个 epoch 验证一次）
             random_seed: 随机种子，默认 12345
         """
 
@@ -51,7 +51,7 @@ class CreateTrainMOdel:
         self._set_random_seed()
 
         self.model = TrainModel(md_path, config_path)
-        self.logger.info(f"初始化模型: {self.model}")
+        self.logger.info(f"初始化模型：{self.model}")
 
         self.dataset: ImgFolderDataset = ImgFolderDataset(
             data_path, self.model.transform)
@@ -90,7 +90,7 @@ class CreateTrainMOdel:
 
         n_classes = len(self.dataset.classes)
         self.loss_model = LossModel(n_classes)
-        self.logger.info(f"初始化损失模型: {self.loss_model}")
+        self.logger.info(f"初始化损失模型：{self.loss_model}")
 
         self.test_dataset: ImgFolderDataset = ImgFolderDataset(
             test_path, self.model.test_transform)
@@ -100,7 +100,7 @@ class CreateTrainMOdel:
             shuffle=False,
             num_workers=num_workers,
         )
-        self.logger.info(f"测试数据加载器: {self.test_loader.dataset}")
+        self.logger.info(f"测试数据加载器：{self.test_loader.dataset}")
 
         self.reference_set: ImgFolderDataset = ImgFolderDataset(
             data_path, self.model.test_transform)
@@ -110,7 +110,7 @@ class CreateTrainMOdel:
             shuffle=False,
             num_workers=num_workers,
         )
-        self.logger.info(f"参考数据加载器: {self.reference_loader.dataset}")
+        self.logger.info(f"参考数据加载器：{self.reference_loader.dataset}")
 
         time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.checkpoint_dir: str = os.path.join(chk_path, time)
@@ -123,6 +123,25 @@ class CreateTrainMOdel:
 
         self.train_epochs = train_epochs
         self.validate_frequency = validate_frequency
+        
+        # 初始化学习率调度器
+        self.scheduler_patience = self.model.config.get("lr_scheduler_patience", 10)
+        self.scheduler_factor = self.model.config.get("lr_scheduler_factor", 0.1)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.model.optimizer, 
+            mode='max', 
+            factor=self.scheduler_factor, 
+            patience=self.scheduler_patience,
+            verbose=True,
+            min_lr=1e-7
+        )
+        
+        # 早停机制配置
+        self.early_stopping_patience = self.model.config.get("early_stopping_patience", 20)
+        self.min_delta = self.model.config.get("min_delta", 0.001)
+        self.no_improvement_count = 0
+        self.best_map = 0.0
+        
         self.output_dict: Dict[str, Any] = {
             "total_epoch": train_epochs,
             "current_epoch": 0,
@@ -218,11 +237,36 @@ class CreateTrainMOdel:
                         self.writer.add_scalar(
                             f"test/{metric_name}", value, current_iter)
 
+                    # 更新学习率调度器
+                    current_lr = self.model.optimizer.param_groups[0]['lr']
+                    self.writer.add_scalar('train/learning_rate', current_lr, current_iter)
+                    
+                    # 学习率调度器 - 基于 MAP 指标
+                    self.scheduler.step(metrics['mean_average_precision'])
+
                     # 保存最佳模型
                     if metrics['mean_average_precision'] > self.output_dict["metrics"]["mean_average_precision"]:
                         self.output_dict["metrics"] = metrics
                         checkpoint_path = self._save_checkpoint()
                         self.logger.info(f"保存最佳模型：{checkpoint_path}")
+                        
+                        # 重置早停计数
+                        self.no_improvement_count = 0
+                        self.best_map = metrics['mean_average_precision']
+                    else:
+                        # 检查是否有改进（考虑 min_delta）
+                        if metrics['mean_average_precision'] > self.best_map + self.min_delta:
+                            self.no_improvement_count = 0
+                        else:
+                            self.no_improvement_count += 1
+                    
+                    # 早停检查
+                    if self.no_improvement_count >= self.early_stopping_patience:
+                        self.logger.info(
+                            f"早停触发：MAP 在 {self.early_stopping_patience} 轮内没有显著提升 "
+                            f"(当前 MAP: {metrics['mean_average_precision']:.2f}, 最佳 MAP: {self.best_map:.2f})"
+                        )
+                        return  # 提前结束训练
 
                 # 训练单个批次（支持梯度累积）
                 is_accumulation_step = (batch_idx + 1) % accumulation_steps != 0
@@ -238,7 +282,7 @@ class CreateTrainMOdel:
                         f"train/{metric_name}", value, current_iter)
 
                 # 打印训练日志
-                log_frequency = self.model.config.get("log_frequency", 100)
+                log_frequency = self.model.config.get("log_frequency", 50)
                 if current_iter % log_frequency == 0 and batch_count > 0:
                     average_loss: float = running_loss / batch_count
                     average_hard_triplets: float = running_fraction_hard_triplets / batch_count * 100
@@ -251,21 +295,18 @@ class CreateTrainMOdel:
                     running_fraction_hard_triplets = 0.0
                     batch_count = 0
 
-            # 在最后一个 epoch 运行验证
-            if current_epoch == self.output_dict["total_epoch"]:
-                metrics: Dict[str, Any] = self._calculate_all_metrics()
-                self._log_info_metrics(metrics)
+            # Epoch 结束时计算平均损失
+            if batch_count > 0:
+                average_loss: float = running_loss / batch_count
+                self.logger.info(
+                    f"EPOCH COMPLETE [{current_epoch}]\t"
+                    f"avg_train_loss: {average_loss:.6f}"
+                )
+                # 记录 epoch 平均损失
+                self.writer.add_scalar('train/epoch_avg_loss', average_loss, current_epoch)
 
-                for metric_name, value in metrics.items():
-                    self.writer.add_scalar(
-                        f"test/{metric_name}", value, current_iter)
-
-                if metrics['mean_average_precision'] > self.output_dict["metrics"]["mean_average_precision"]:
-                    self.output_dict["metrics"] = metrics
-                    self._save_checkpoint()
-                    
         except Exception as e:
-            self.logger.error(f"训练周期 {current_epoch} 失败：{e}", exc_info=True)
+            self.logger.error(f"训练周期中发生错误：{e}", exc_info=True)
             raise
 
     def _log_info_metrics(self, metrics: Dict[str, Any]):
@@ -637,43 +678,6 @@ class CreateTrainMOdel:
         )
         return checkpoint_path
 
-    def _train_one_batch(self, images: torch.Tensor, labels: torch.Tensor) -> Tuple[float, float]:
-        """
-        训练单个批次
-        
-        Args:
-            images: 图像张量 [batch_size, C, H, W]
-            labels: 标签张量 [batch_size]
-            
-        Returns:
-            Tuple[float, float]: (损失值，困难三元组比例)
-        """
-        self.model.model.train()
-        self.model.optimizer.zero_grad()
-
-        images: torch.Tensor = images.to(self.model.device, non_blocking=True)
-        labels: torch.Tensor = labels.to(self.model.device, non_blocking=True)
-
-        # 前向传播
-        embeddings: torch.Tensor = self.model.model(images)
-        loss, fraction_hard_triplets = self.loss_model(embeddings, labels)
-
-        # 反向传播
-        loss.backward()
-        self.model.optimizer.step()
-        
-        # 释放不再使用的张量以节省内存
-        del images, labels, embeddings, loss
-        
-        # CPU/GPU 垃圾回收
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-        return {
-            "loss": loss.item(),
-            "fraction_hard_triplets": float(fraction_hard_triplets)
-        }
-    
     def _train_one_batch_with_accumulation(self, images: torch.Tensor, labels: torch.Tensor, 
                                           is_accumulation_step: bool) -> Dict[str, float]:
         """
@@ -682,16 +686,15 @@ class CreateTrainMOdel:
         Args:
             images: 图像张量 [batch_size, C, H, W]
             labels: 标签张量 [batch_size]
-            is_accumulation_step: 是否是累积步骤（不更新权重）
+            is_accumulation_step: 是否是累积步骤（True 表示还需要继续累积，False 表示需要更新权重）
             
         Returns:
             Dict[str, float]: 包含损失和困难三元组比例的字典
         """
         self.model.model.train()
         
-        # 如果不是累积步骤，才清零梯度
-        if not is_accumulation_step:
-            self.model.optimizer.zero_grad()
+        # 修正：在每个 batch 开始时都清零梯度（符合梯度累积正确实现规范）
+        self.model.optimizer.zero_grad()
 
         images: torch.Tensor = images.to(self.model.device, non_blocking=True)
         labels: torch.Tensor = labels.to(self.model.device, non_blocking=True)
@@ -705,10 +708,11 @@ class CreateTrainMOdel:
         scaled_loss = loss / self.model.config.get("accumulation_steps", 1)
         scaled_loss.backward()
         
-        # 只在非累积步骤更新权重
+        # 只在非累积步骤（最后一个累积步骤）更新权重
         if not is_accumulation_step:
             self.model.optimizer.step()
-        
+        # 注意：如果是累积步骤，不调用 step()，梯度会保留到下一个 batch
+
         # 释放不再使用的张量以节省内存
         del images, labels, embeddings
         
