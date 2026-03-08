@@ -8,51 +8,99 @@ from faiss_database import FeatureDatabase
 from log import Log
 from model import PetNet50
 
+# 尝试导入 OpenVINO 推理器
+try:
+    from openvino_infer import create_openvino_inferencer
+    USE_OPENVINO = True
+except ImportError:
+    USE_OPENVINO = False
+    print("⚠️ OpenVINO 推理器不可用，将使用 PyTorch CPU 推理")
+
 class InferDog:
     loger = Log(__qualname__)
 
-    def __init__(self, model_path: str, db_path: str, index_name: str, query_size: int = 20):
-        self.model = PetNet50(model_path)
+    def __init__(self, model_path: str, db_path: str, index_name: str, query_size: int = 20,
+                 use_openvino: bool = True):
+        """
+        初始化推理器
+        
+        Args:
+            model_path: 模型路径
+            db_path: 特征数据库路径
+            index_name: 索引名称
+            query_size: 查询数量
+            use_openvino: 是否使用 OpenVINO GPU 加速（默认 True）
+        """
         self.query_size = query_size
+        
+        # 加载特征数据库
         database = FeatureDatabase(db_path)
         index, features = database.load_features(index_name)
         self.index = index
         self.features = features
+        
+        # 选择推理方式
+        if USE_OPENVINO and use_openvino:
+            print("🚀 使用 OpenVINO GPU/NPU 加速推理...")
+            try:
+                self.openvino_inferencer = create_openvino_inferencer(model_path, prefer_gpu=True)
+                self.use_openvino = True
+                self.model = None  # 不需要 PyTorch 模型
+                print(f"✅ OpenVINO 推理器初始化成功")
+            except Exception as e:
+                print(f"⚠️ OpenVINO 初始化失败：{e}，降级到 PyTorch CPU 推理")
+                self.use_openvino = False
+                self.model = PetNet50(model_path)
+        else:
+            print("⚠️ 使用 PyTorch CPU 推理")
+            self.use_openvino = False
+            self.model = PetNet50(model_path)
 
     @loger.performance_monitor("品种比对")
     def find(self, image: Image, sort: int = 3) -> List[Tuple[str, float]]:
         """
         根据输入图像查找相似犬种
-
+    
         Args:
             image: 输入的狗狗图像
-            sort: 返回前N个最相似的结果
-
+            sort: 返回前 N 个最相似的结果
+    
         Returns:
             包含犬种名称和相似度分数的元组列表
         """
         try:
-            # 图像预处理和特征提取
-            input_tensor: torch.Tensor = self.model.transform(
-                image).unsqueeze(dim=0).to(self.model.device, non_blocking=True)
-            embedding: torch.Tensor = self.model.model(input_tensor)
-            query_embedding: np.ndarray = embedding.detach().cpu().numpy()
-
+            # 图像预处理
+            if self.use_openvino:
+                input_tensor: torch.Tensor = self.openvino_inferencer.inferencer.model.transform(image).unsqueeze(dim=0)
+            else:
+                input_tensor: torch.Tensor = self.model.transform(image).unsqueeze(dim=0)
+                
+            # 特征提取（使用 OpenVINO 或 PyTorch）
+            if self.use_openvino:
+                # OpenVINO GPU/NPU加速推理
+                embedding_np = self.openvino_inferencer.infer(input_tensor)
+                query_embedding: np.ndarray = embedding_np
+            else:
+                # PyTorch CPU 推理
+                input_tensor = input_tensor.to(self.model.device, non_blocking=True)
+                embedding: torch.Tensor = self.model.model(input_tensor)
+                query_embedding: np.ndarray = embedding.detach().cpu().numpy()
+    
             # 特征匹配
             distances, indices = self.index.search(
                 query_embedding, self.query_size)
             indices: List[int] = indices.ravel().tolist()
             distances: List[float] = distances.ravel().tolist()
             indices_labels: List[str] = [self.features[i] for i in indices]
-
+    
             self.loger.info(
                 f"完成查询 找到 {len(indices)} 个最相似的参考特征向量")
-
+    
             # 计算相似犬种
             return self._query_similar_breeds(indices, distances, indices_labels, sort)
-
+    
         except Exception as e:
-            self.loger.error(f"品种识别过程中发生错误: {str(e)}")
+            self.loger.error(f"品种识别过程中发生错误：{str(e)}")
             raise
 
     def _query_similar_breeds(self, indices: List[int], distances: List[float], indices_labels: List[str], sort: int) -> List[Tuple[str, float]]:

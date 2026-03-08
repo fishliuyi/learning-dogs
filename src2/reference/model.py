@@ -14,12 +14,34 @@ from log import Log
 
 
 def get_optimal_device() -> torch.device:
-    """获取最优计算设备"""
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        return torch.device("mps")
-    else:
+    """获取最优计算设备
+    
+    优先级：GPU (OpenVINO) > NPU (OpenVINO) > CPU
+    """
+    try:
+        import openvino as ov
+        core = ov.Core()
+        devices = core.available_devices
+        
+        # 优先使用GPU
+        if 'GPU' in devices:
+            gpu_name = core.get_property('GPU', 'FULL_DEVICE_NAME')
+            print(f"✅ 检测到 Intel GPU: {gpu_name}")
+            return torch.device("cpu")  # OpenVINO 会在推理时使用GPU
+        # 其次使用 NPU
+        elif 'NPU' in devices:
+            npu_name = core.get_property('NPU', 'FULL_DEVICE_NAME')
+            print(f"✅ 检测到 Intel NPU: {npu_name}")
+            return torch.device("cpu")  # OpenVINO 会在推理时使用 NPU
+        else:
+            print("⚠️ 未检测到 Intel GPU/NPU，使用 CPU")
+            return torch.device("cpu")
+            
+    except ImportError:
+        print("⚠️ OpenVINO 未安装，使用 CPU")
+        return torch.device("cpu")
+    except Exception as e:
+        print(f"⚠️ OpenVINO 初始化失败：{e}，使用 CPU")
         return torch.device("cpu")
 
 

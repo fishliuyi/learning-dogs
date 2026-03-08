@@ -18,7 +18,7 @@ from model import TrainModel, LossModel
 from image_data import ImgFolderDataset
 
 
-class CreateTrainMOdel:
+class CreateTrainModel:
 
     loger = Log(__qualname__)
 
@@ -132,7 +132,6 @@ class CreateTrainMOdel:
             mode='max', 
             factor=self.scheduler_factor, 
             patience=self.scheduler_patience,
-            verbose=True,
             min_lr=1e-7
         )
         

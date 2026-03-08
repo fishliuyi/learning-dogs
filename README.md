@@ -19,6 +19,48 @@ src2 是基于 [deep-metric-learning-tsinghua-dogs](https://github.com/QuocThang
 - ✅ **图像处理**: OpenCV 4.9.0, Pillow
 - ✅ **开发工具**: Jupyter, IPython, Tqdm, Black, Flake8
 
+# src2 项目依赖清单
+# 适用于 Python 3.11.14 + conda 环境 pet
+
+# 深度学习框架
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Intel OpenVINO (Intel GPU 加速)
+openvino==2024.6.0
+openvino-dev==2024.6.0
+
+# 向量数据库 (FAISS)
+faiss-cpu>=1.7.0
+
+# 数据处理与科学计算
+numpy>=1.16.6,<2.0.0
+scipy>=1.10.0
+scikit-learn>=1.8.0
+pandas>=2.0.0
+
+# 图像处理
+opencv-python>=4.9.0
+pillow>=8.0.0
+
+# 可视化
+matplotlib>=3.10.0
+tensorboard>=2.20.0
+
+# 工具库
+psutil>=5.9.0
+requests>=2.25.0
+pyyaml>=5.4.1
+tqdm>=4.67.0
+natsort>=8.4.0
+
+# 开发工具（可选）
+# black
+# flake8
+# jupyter
+
+
 ---
 
 ## 🚀 快速开始指南

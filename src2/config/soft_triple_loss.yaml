@@ -9,16 +9,16 @@ image_size: 448  # 保持高分辨率以获得更好精度
 embedding_size: 128
 
 # Batch size - 单批次大小（每张 GPU/ MPS）
-batch_size: 32  # 基础批次大小
+batch_size: 64  # 基础批次大小
 
 # Number of workers for data loading
 # Mac M1/M2 推荐：2-4，Windows 推荐：0-1
-n_workers: 4
+n_workers: 8
 
 # Gradient accumulation steps
 # 有效批次大小 = batch_size × accumulation_steps
 # 推荐值：8-16（等效 batch_size=256-512）
-accumulation_steps: 16
+accumulation_steps: 8
 
 # Numbers of centers for each class
 n_centers_per_class: 5

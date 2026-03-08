@@ -12,7 +12,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent / "reference"))
-from reference import Log, CreateTrainMOdel
+from reference import Log, CreateTrainModel
 
 
 def main():
@@ -30,8 +30,8 @@ def main():
     TEST_PATH = "data/TsinghuaDogs/val/"  # 验证数据路径
     CHECKPOINT_PATH = "data/TsinghuaDogs/checkpoints/"  # 检查点保存路径
 
-    TRAIN_EPOCHS = 150  # 训练轮次（配合早停机制，实际可能提前结束）
-    VALIDATE_FREQUENCY = 100  # 验证频率（每个 epoch 验证一次）
+    TRAIN_EPOCHS = 300  # 训练轮次（配合早停机制，实际可能提前结束）
+    VALIDATE_FREQUENCY = 50  # 验证频率（每个 epoch 验证一次）
     RANDOM_SEED = 12345  # 随机种子（固定以确保可复现性）
     # ================================================
 
@@ -40,7 +40,7 @@ def main():
         logger.info("开始训练宠物识别模型")
 
         # 初始化训练器
-        trainer = CreateTrainMOdel(
+        trainer = CreateTrainModel(
             config_path=CONFIG_PATH,
             md_path=MODEL_PATH,
             data_path=DATA_PATH,
