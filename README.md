@@ -2,6 +2,32 @@
 
 src2 是基于 [deep-metric-learning-tsinghua-dogs](https://github.com/QuocThangNguyen/deep-metric-learning-tsinghua-dogs/) 项目的重构版本，针对实际应用场景进行了全面优化和改进。
 
+## ✅ 安装总结
+
+### 📦 已完成的安装
+
+**基础环境:**
+- ✅ Miniconda3 (Python 3.11) - 使用 pyenv 安装
+- ✅ Conda 版本：25.11.1
+- ✅ Python 版本：3.11.14
+- ✅ 环境名称：`ml`
+
+**核心库 (全部通过测试):**
+- ✅ **数据科学**: NumPy 1.26.4, Pandas 3.0.0, SciPy 1.17.0, Scikit-learn 1.8.0
+- ✅ **深度学习**: PyTorch 2.2.2 (支持 MPS 加速!), Torchvision 0.17.2, Torchaudio
+- ✅ **可视化**: Matplotlib 3.10.8, Seaborn
+- ✅ **图像处理**: OpenCV 4.9.0, Pillow
+- ✅ **开发工具**: Jupyter, IPython, Tqdm, Black, Flake8
+
+---
+
+## 🚀 快速开始指南
+
+### 1. 激活环境
+```bash
+conda activate ml
+```
+
 
 # src2 项目文档导航
 

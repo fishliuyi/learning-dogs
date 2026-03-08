@@ -71,6 +71,11 @@ class CreateTrainMOdel:
         # 注意：Windows 上可能会有警告，但实际能提升数据加载速度
         use_pin_memory = True
         
+        # 检测 MPS 设备，如果是 MPS 则禁用 pin_memory
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            use_pin_memory = False
+            self.logger.info("检测到 MPS 设备，禁用 pin_memory")
+        
         # 输出警告过滤（可选）
         import warnings
         warnings.filterwarnings('ignore', message='.*pin_memory.*accelerator.*')
@@ -560,7 +565,7 @@ class CreateTrainMOdel:
             float: NMI 分数
         """
         embeddings = embeddings.cpu().numpy()
-        y_test: np.ndarray = labels_test.cpu().numpy().astype(np.int)
+        y_test: np.ndarray = labels_test.cpu().numpy().astype(int)
 
         y_pred: np.ndarray = KMeans(
             n_clusters=n_classes).fit(embeddings).labels_
